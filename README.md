@@ -63,7 +63,7 @@ sudo apt update && sudo apt install -y curl jq python3
 ./localizar-ip.sh --theme-file ~/.ipx-br-theme 8.8.8.8
 ./localizar-ip.sh --theme cyber_blue 8.8.8.8
 ./localizar-ip.sh --list-themes
-./localizar-ip.sh 8
+./localizar-ip.sh 8   # salva tema permanente em ~/.ipx-br-theme
 ./localizar-ip.sh --batch ips.txt --no-progress
 ./localizar-ip.sh --notify https://SEU-WEBHOOK 8.8.8.8
 ./localizar-ip.sh --update

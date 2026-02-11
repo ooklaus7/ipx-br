@@ -183,6 +183,20 @@ load_theme_file() {
   fi
 }
 
+save_theme_persistent() {
+  local preset="$1"
+  local normalized
+  normalized="$(echo "$preset" | tr '[:upper:]' '[:lower:]')"
+  if ! set_theme_preset "$normalized"; then
+    err "Tema invalido: '$preset' (use --list-themes)"
+    return 1
+  fi
+  mkdir -p "$(dirname "$THEME_FILE")"
+  printf "theme=%s\n" "$normalized" >"$THEME_FILE"
+  ok "Tema salvo em $THEME_FILE: $normalized"
+  return 0
+}
+
 render_progress() {
   local current="$1"
   local total="$2"
@@ -278,8 +292,8 @@ run_numeric_menu() {
       echo "Temas disponiveis:"
       list_themes | sed 's/^/  - /'
       read -r -p "Digite o nome do tema: " m_theme
-      read -r -p "Digite o IP para consultar com esse tema: " m_ip
-      set -- --theme "$m_theme" "$m_ip"
+      save_theme_persistent "$m_theme" || exit 1
+      exit 0
       ;;
     0)
       exit 0
@@ -453,8 +467,8 @@ if [[ $# -gt 0 ]]; then
       echo "Temas disponiveis:"
       list_themes | sed 's/^/  - /'
       read -r -p "Digite o nome do tema: " n_theme
-      read -r -p "Digite o IP para consultar com esse tema: " n_ip
-      set -- --theme "$n_theme" "$n_ip"
+      save_theme_persistent "$n_theme" || exit 1
+      exit 0
       ;;
   esac
 fi
