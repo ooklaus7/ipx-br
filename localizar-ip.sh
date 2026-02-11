@@ -243,6 +243,7 @@ run_numeric_menu() {
   echo "  5) Mostrar historico"
   echo "  6) Atualizar ferramenta"
   echo "  7) Mostrar ajuda"
+  echo "  8) Escolher tema"
   echo "  0) Sair"
   print_divider
   read -r -p "Opcao: " opt
@@ -271,6 +272,14 @@ run_numeric_menu() {
       ;;
     7)
       set -- --help
+      ;;
+    8)
+      echo
+      echo "Temas disponiveis:"
+      list_themes | sed 's/^/  - /'
+      read -r -p "Digite o nome do tema: " m_theme
+      read -r -p "Digite o IP para consultar com esse tema: " m_ip
+      set -- --theme "$m_theme" "$m_ip"
       ;;
     0)
       exit 0
@@ -381,6 +390,7 @@ print_help() {
   echo "  $0 --update"
   echo "  $0 --export csv --batch ips.txt"
   echo "  $0 1              # abre fluxo numerico"
+  echo "  $0 8              # abre submenu de temas"
 }
 
 info() { echo "${C_CYAN}$*${C_RESET}"; }
@@ -437,6 +447,14 @@ if [[ $# -gt 0 ]]; then
       ;;
     7)
       set -- --help
+      ;;
+    8)
+      echo
+      echo "Temas disponiveis:"
+      list_themes | sed 's/^/  - /'
+      read -r -p "Digite o nome do tema: " n_theme
+      read -r -p "Digite o IP para consultar com esse tema: " n_ip
+      set -- --theme "$n_theme" "$n_ip"
       ;;
   esac
 fi
