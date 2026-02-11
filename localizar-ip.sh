@@ -888,7 +888,8 @@ to_text() {
       + if $intel and $risk_visual then [
           "Intel nivel: \(risk_label)"
         ] else [] end
-    ] + if $map then ["Mapa:      https://www.google.com/maps?q=\(.latitude),\(.longitude)"] else [] end)[]'
+      + if $map then ["Mapa:      https://www.google.com/maps?q=\(.latitude),\(.longitude)"] else [] end
+    )[]'
 }
 
 to_csv() {
