@@ -11,7 +11,7 @@ param(
 )
 
 $NomeFerramenta = "ipx br"
-$Versao = "1.0.0"
+$Versao = "1.1.0"
 $Autor = "cyberkali"
 $Banner = @"
  _            __
@@ -22,9 +22,25 @@ $Banner = @"
   /_/
 "@
 
+function Show-Banner {
+    $colors = @("Green", "DarkGreen", "Green", "DarkGreen", "Green", "DarkGreen")
+    $i = 0
+    foreach ($line in ($Banner -split "`n")) {
+        if ([string]::IsNullOrWhiteSpace($line)) { continue }
+        $color = $colors[$i % $colors.Count]
+        Write-Color $line $color
+        $i++
+    }
+}
+
+function Show-Divider {
+    Write-Color "============================================================" "DarkGreen"
+}
+
 function Show-Help {
-    Write-Host $Banner
-    Write-Host "$NomeFerramenta v$Versao - por $Autor"
+    Show-Banner
+    Write-Color "$NomeFerramenta v$Versao - por $Autor" "Green"
+    Show-Divider
     Write-Host ""
     Write-Host "Uso:"
     Write-Host "  .\localizar-ip.ps1 [opcoes] <ip>"
@@ -48,8 +64,9 @@ function Show-Help {
 }
 
 function Invoke-NumericMenu {
-    Write-Host $Banner
-    Write-Host "$NomeFerramenta v$Versao - por $Autor"
+    Show-Banner
+    Write-Color "$NomeFerramenta v$Versao - por $Autor" "Green"
+    Show-Divider
     Write-Host ""
     Write-Host "Escolha uma opcao:"
     Write-Host "  1) Consultar um IP"
@@ -58,6 +75,7 @@ function Invoke-NumericMenu {
     Write-Host "  4) Consulta em lote por arquivo"
     Write-Host "  5) Mostrar ajuda"
     Write-Host "  0) Sair"
+    Show-Divider
     $opt = Read-Host "Opcao"
 
     $cfg = [ordered]@{
@@ -97,7 +115,7 @@ function Invoke-NumericMenu {
 function Write-Color {
     param(
         [string]$Text,
-        [ValidateSet("Cyan", "Green", "Red", "Yellow", "Default")]
+        [ValidateSet("Green", "DarkGreen", "Red", "Yellow", "Default")]
         [string]$Color = "Default"
     )
     if ($NoColor -or $Color -eq "Default") {
@@ -235,17 +253,18 @@ if ($MeuIp) {
 }
 
 if (-not $Json) {
-    Write-Host $Banner
-    Write-Color "$NomeFerramenta v$Versao - por $Autor" "Cyan"
+    Show-Banner
+    Write-Color "$NomeFerramenta v$Versao - por $Autor" "Green"
     if ($MeuIp) {
-        Write-Color "Consultando localizacao para o seu IP publico: $Ip" "Cyan"
+        Write-Color "Consultando localizacao para o seu IP publico: $Ip" "DarkGreen"
     }
     elseif (-not [string]::IsNullOrWhiteSpace($Ip)) {
-        Write-Color "Consultando localizacao para o IP: $Ip" "Cyan"
+        Write-Color "Consultando localizacao para o IP: $Ip" "DarkGreen"
     }
     else {
-        Write-Color "Consultando localizacao em lote: $Batch" "Cyan"
+        Write-Color "Consultando localizacao em lote: $Batch" "DarkGreen"
     }
+    Show-Divider
     Write-Host ""
 }
 
@@ -347,5 +366,6 @@ Write-Output $saidaFinal
 
 if (-not $Json) {
     Write-Host ""
+    Show-Divider
     Write-Color "assinatura: $Autor" "Green"
 }
