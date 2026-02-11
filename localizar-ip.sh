@@ -863,7 +863,7 @@ to_text() {
       elif risk >= 50 then "HIGH"
       elif risk >= 25 then "MED"
       else "LOW" end;
-    def btxt(v): if v then "sim" else "nao" end;
+    def btxt: if . then "sim" else "nao" end;
     ([
       "IP:        \(.ip // "")",
       "Pais:      \(.country // "")",
