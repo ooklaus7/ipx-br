@@ -11,7 +11,7 @@ param(
 )
 
 $NomeFerramenta = "ipx br"
-$Versao = "1.1.0"
+$Versao = "2.0.0"
 $Autor = "cyberkali"
 $Banner = @"
  _            __

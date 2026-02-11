@@ -1,5 +1,7 @@
 # ipx br
 
+Release atual: `v2.0.0`
+
 Ferramenta de localizacao por IP com:
 - menu numerico
 - modo `--meu-ip`

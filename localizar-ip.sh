@@ -2,7 +2,7 @@
 set -euo pipefail
 
 NOME_FERRAMENTA="ipx br"
-VERSAO="1.4.0"
+VERSAO="2.0.0"
 AUTOR="cyberkali"
 BANNER='
  _            __
