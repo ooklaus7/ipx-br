@@ -74,6 +74,137 @@ else
   C_GREEN_DIM=""
 fi
 
+translate_country() {
+  case "$1" in
+    "Brazil") echo "Brasil" ;;
+    "United States") echo "Estados Unidos" ;;
+    "United Kingdom") echo "Reino Unido" ;;
+    "England") echo "Inglaterra" ;;
+    "Scotland") echo "Escocia" ;;
+    "Wales") echo "Pais de Gales" ;;
+    "Northern Ireland") echo "Irlanda do Norte" ;;
+    "Canada") echo "Canada" ;;
+    "Mexico") echo "Mexico" ;;
+    "Argentina") echo "Argentina" ;;
+    "Chile") echo "Chile" ;;
+    "Colombia") echo "Colombia" ;;
+    "Peru") echo "Peru" ;;
+    "Venezuela") echo "Venezuela" ;;
+    "Uruguay") echo "Uruguai" ;;
+    "Paraguay") echo "Paraguai" ;;
+    "Bolivia") echo "Bolivia" ;;
+    "Ecuador") echo "Equador" ;;
+    "Guyana") echo "Guiana" ;;
+    "Suriname") echo "Suriname" ;;
+    "Panama") echo "Panama" ;;
+    "Costa Rica") echo "Costa Rica" ;;
+    "Guatemala") echo "Guatemala" ;;
+    "Honduras") echo "Honduras" ;;
+    "El Salvador") echo "El Salvador" ;;
+    "Nicaragua") echo "Nicaragua" ;;
+    "Cuba") echo "Cuba" ;;
+    "Dominican Republic") echo "Republica Dominicana" ;;
+    "Haiti") echo "Haiti" ;;
+    "Jamaica") echo "Jamaica" ;;
+    "Bahamas") echo "Bahamas" ;;
+    "Barbados") echo "Barbados" ;;
+    "Trinidad and Tobago") echo "Trindade e Tobago" ;;
+    "Portugal") echo "Portugal" ;;
+    "Spain") echo "Espanha" ;;
+    "France") echo "Franca" ;;
+    "Germany") echo "Alemanha" ;;
+    "Italy") echo "Italia" ;;
+    "Netherlands") echo "Paises Baixos" ;;
+    "Belgium") echo "Belgica" ;;
+    "Switzerland") echo "Suica" ;;
+    "Austria") echo "Austria" ;;
+    "Ireland") echo "Irlanda" ;;
+    "Poland") echo "Polonia" ;;
+    "Czech Republic") echo "Republica Tcheca" ;;
+    "Czechia") echo "Republica Tcheca" ;;
+    "Slovakia") echo "Eslovaquia" ;;
+    "Hungary") echo "Hungria" ;;
+    "Romania") echo "Romenia" ;;
+    "Bulgaria") echo "Bulgaria" ;;
+    "Greece") echo "Grecia" ;;
+    "Sweden") echo "Suecia" ;;
+    "Norway") echo "Noruega" ;;
+    "Finland") echo "Finlandia" ;;
+    "Denmark") echo "Dinamarca" ;;
+    "Iceland") echo "Islandia" ;;
+    "Russia") echo "Russia" ;;
+    "Russian Federation") echo "Russia" ;;
+    "Ukraine") echo "Ucrania" ;;
+    "Belarus") echo "Bielorrussia" ;;
+    "China") echo "China" ;;
+    "Japan") echo "Japao" ;;
+    "South Korea") echo "Coreia do Sul" ;;
+    "Korea, Republic of") echo "Coreia do Sul" ;;
+    "North Korea") echo "Coreia do Norte" ;;
+    "Korea, Democratic People's Republic of") echo "Coreia do Norte" ;;
+    "India") echo "India" ;;
+    "Pakistan") echo "Paquistao" ;;
+    "Bangladesh") echo "Bangladesh" ;;
+    "Sri Lanka") echo "Sri Lanka" ;;
+    "Nepal") echo "Nepal" ;;
+    "Bhutan") echo "Butao" ;;
+    "Myanmar") echo "Mianmar" ;;
+    "Thailand") echo "Tailandia" ;;
+    "Vietnam") echo "Vietna" ;;
+    "Laos") echo "Laos" ;;
+    "Cambodia") echo "Camboja" ;;
+    "Malaysia") echo "Malasia" ;;
+    "Singapore") echo "Singapura" ;;
+    "Indonesia") echo "Indonesia" ;;
+    "Philippines") echo "Filipinas" ;;
+    "Taiwan") echo "Taiwan" ;;
+    "Hong Kong") echo "Hong Kong" ;;
+    "Israel") echo "Israel" ;;
+    "Saudi Arabia") echo "Arabia Saudita" ;;
+    "United Arab Emirates") echo "Emirados Arabes Unidos" ;;
+    "Qatar") echo "Catar" ;;
+    "Kuwait") echo "Kuwait" ;;
+    "Bahrain") echo "Bahrein" ;;
+    "Oman") echo "Oma" ;;
+    "Yemen") echo "Iemen" ;;
+    "Iran") echo "Ira" ;;
+    "Iran, Islamic Republic of") echo "Ira" ;;
+    "Iraq") echo "Iraque" ;;
+    "Syria") echo "Siria" ;;
+    "Jordan") echo "Jordania" ;;
+    "Lebanon") echo "Libano" ;;
+    "Turkey") echo "Turquia" ;;
+    "South Africa") echo "Africa do Sul" ;;
+    "Egypt") echo "Egito" ;;
+    "Morocco") echo "Marrocos" ;;
+    "Algeria") echo "Argelia" ;;
+    "Tunisia") echo "Tunisia" ;;
+    "Nigeria") echo "Nigeria" ;;
+    "Kenya") echo "Quenia" ;;
+    "Ethiopia") echo "Etiopia" ;;
+    "Ghana") echo "Gana" ;;
+    "Angola") echo "Angola" ;;
+    "Mozambique") echo "Mocambique" ;;
+    "Australia") echo "Australia" ;;
+    "New Zealand") echo "Nova Zelandia" ;;
+    *) echo "$1" ;;
+  esac
+}
+
+translate_conn_type() {
+  case "$1" in
+    "wired") echo "cabeada" ;;
+    "wireless") echo "sem fio" ;;
+    "mobile") echo "movel" ;;
+    "cellular") echo "celular" ;;
+    "fiber") echo "fibra" ;;
+    "dsl") echo "dsl" ;;
+    "satellite") echo "satelite" ;;
+    "unknown"|"n/a"|"") echo "desconhecido" ;;
+    *) echo "$1" ;;
+  esac
+}
+
 set_theme_preset() {
   local preset="$1"
   case "$preset" in
@@ -1081,12 +1212,14 @@ send_notify() {
 to_compact_json() {
   local ping_value="$1"
   local host_value="$2"
-  jq -c --argjson map "$MAP_MODE" --argjson ping "$PING_MODE" --argjson host "$HOST_MODE" --argjson intel "$INTEL_MODE" --arg ping_value "$ping_value" --arg host_value "$host_value" '
+  local country_pt="$3"
+  local conn_type_pt="$4"
+  jq -c --argjson map "$MAP_MODE" --argjson ping "$PING_MODE" --argjson host "$HOST_MODE" --argjson intel "$INTEL_MODE" --arg ping_value "$ping_value" --arg host_value "$host_value" --arg country_pt "$country_pt" --arg conn_type_pt "$conn_type_pt" '
     def b2i(v): if v == true then 1 else 0 end;
     def risk: ((b2i(.security.proxy // false) + b2i(.security.vpn // false) + b2i(.security.tor // false) + b2i(.security.hosting // false)) * 25);
     ({
       ip,
-      pais: .country,
+      pais: $country_pt,
       regiao: .region,
       cidade: .city,
       cep: .postal,
@@ -1105,7 +1238,7 @@ to_compact_json() {
           vpn: (.security.vpn // false),
           tor: (.security.tor // false),
           hosting: (.security.hosting // false),
-          tipo_conexao: (.connection.type // "n/a"),
+          tipo_conexao: $conn_type_pt,
           risk_score: risk
         }
       } else {} end)
@@ -1115,18 +1248,20 @@ to_compact_json() {
 to_text() {
   local ping_value="$1"
   local host_value="$2"
-  jq -r --argjson map "$MAP_MODE" --argjson ping "$PING_MODE" --argjson host "$HOST_MODE" --argjson intel "$INTEL_MODE" --argjson risk_visual "$RISK_VISUAL_MODE" --arg ping_value "$ping_value" --arg host_value "$host_value" '
+  local country_pt="$3"
+  local conn_type_pt="$4"
+  jq -r --argjson map "$MAP_MODE" --argjson ping "$PING_MODE" --argjson host "$HOST_MODE" --argjson intel "$INTEL_MODE" --argjson risk_visual "$RISK_VISUAL_MODE" --arg ping_value "$ping_value" --arg host_value "$host_value" --arg country_pt "$country_pt" --arg conn_type_pt "$conn_type_pt" '
     def b2i(v): if v == true then 1 else 0 end;
     def risk: ((b2i(.security.proxy // false) + b2i(.security.vpn // false) + b2i(.security.tor // false) + b2i(.security.hosting // false)) * 25);
     def risk_label:
-      if risk >= 75 then "CRITICAL"
-      elif risk >= 50 then "HIGH"
-      elif risk >= 25 then "MED"
-      else "LOW" end;
+      if risk >= 75 then "CRITICO"
+      elif risk >= 50 then "ALTO"
+      elif risk >= 25 then "MEDIO"
+      else "BAIXO" end;
     def btxt: if . then "sim" else "nao" end;
     ([
       "IP:        \(.ip // "")",
-      "Pais:      \(.country // "")",
+      "Pais:      \($country_pt)",
       "Regiao:    \(.region // "")",
       "Cidade:    \(.city // "")",
       "CEP:       \(.postal // "")",
@@ -1142,7 +1277,7 @@ to_text() {
           "Intel vpn:   \((.security.vpn // false) | btxt)",
           "Intel tor:   \((.security.tor // false) | btxt)",
           "Intel host:  \((.security.hosting // false) | btxt)",
-          "Intel tipo:  \(.connection.type // "n/a")",
+          "Intel tipo:  \($conn_type_pt)",
           "Intel score: \(risk)"
         ] else [] end
       + if $intel and $risk_visual then [
@@ -1155,17 +1290,19 @@ to_text() {
 to_csv() {
   local ping_value="$1"
   local host_value="$2"
-  jq -r --argjson map "$MAP_MODE" --argjson ping "$PING_MODE" --argjson host "$HOST_MODE" --argjson intel "$INTEL_MODE" --arg ping_value "$ping_value" --arg host_value "$host_value" '
+  local country_pt="$3"
+  local conn_type_pt="$4"
+  jq -r --argjson map "$MAP_MODE" --argjson ping "$PING_MODE" --argjson host "$HOST_MODE" --argjson intel "$INTEL_MODE" --arg ping_value "$ping_value" --arg host_value "$host_value" --arg country_pt "$country_pt" --arg conn_type_pt "$conn_type_pt" '
     def b2i(v): if v == true then 1 else 0 end;
     def risk: ((b2i(.security.proxy // false) + b2i(.security.vpn // false) + b2i(.security.tor // false) + b2i(.security.hosting // false)) * 25);
     def risk_label:
-      if risk >= 75 then "CRITICAL"
-      elif risk >= 50 then "HIGH"
-      elif risk >= 25 then "MED"
-      else "LOW" end;
+      if risk >= 75 then "CRITICO"
+      elif risk >= 50 then "ALTO"
+      elif risk >= 25 then "MEDIO"
+      else "BAIXO" end;
     [
       .ip,
-      .country,
+      $country_pt,
       .region,
       .city,
       .postal,
@@ -1181,7 +1318,7 @@ to_csv() {
       (if $intel then ((.security.vpn // false)|tostring) else "" end),
       (if $intel then ((.security.tor // false)|tostring) else "" end),
       (if $intel then ((.security.hosting // false)|tostring) else "" end),
-      (if $intel then (.connection.type // "n/a") else "" end),
+      (if $intel then $conn_type_pt else "" end),
       (if $intel then (risk|tostring) else "" end),
       (if $intel then risk_label else "" end)
     ] | @csv
@@ -1190,7 +1327,7 @@ to_csv() {
 
 process_single() {
   local ip="$1"
-  local resp success msg ping_value host_value
+  local resp success msg ping_value host_value country_raw country_pt conn_type_raw conn_type_pt
 
   if ! validate_ip "$ip"; then
     err "IP invalido: '$ip'"
@@ -1226,12 +1363,17 @@ process_single() {
   [[ $ANOMALY_MODE -eq 1 ]] && check_and_record_anomaly "$ip" "$resp"
   [[ $SCREENSHOT_MAP_MODE -eq 1 ]] && save_map_screenshot_from_resp "$ip" "$resp" || true
 
+  country_raw="$(jq -r '.country // ""' <<<"$resp")"
+  country_pt="$(translate_country "$country_raw")"
+  conn_type_raw="$(jq -r '.connection.type // "n/a"' <<<"$resp")"
+  conn_type_pt="$(translate_conn_type "$conn_type_raw")"
+
   if [[ $JSON_MODE -eq 1 ]]; then
-    to_compact_json "$ping_value" "$host_value" <<<"$resp"
+    to_compact_json "$ping_value" "$host_value" "$country_pt" "$conn_type_pt" <<<"$resp"
   elif [[ "$EXPORT_FORMAT" == "csv" ]]; then
-    to_csv "$ping_value" "$host_value" <<<"$resp"
+    to_csv "$ping_value" "$host_value" "$country_pt" "$conn_type_pt" <<<"$resp"
   else
-    to_text "$ping_value" "$host_value" <<<"$resp"
+    to_text "$ping_value" "$host_value" "$country_pt" "$conn_type_pt" <<<"$resp"
   fi
 }
 

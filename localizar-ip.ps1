@@ -14,6 +14,119 @@ param(
 $NomeFerramenta = "ipx br"
 $Versao = "2.0.0"
 $Autor = "cyberkali"
+$PaisPT = @{
+    "Brazil" = "Brasil"
+    "United States" = "Estados Unidos"
+    "United Kingdom" = "Reino Unido"
+    "England" = "Inglaterra"
+    "Scotland" = "Escocia"
+    "Wales" = "Pais de Gales"
+    "Northern Ireland" = "Irlanda do Norte"
+    "Canada" = "Canada"
+    "Mexico" = "Mexico"
+    "Argentina" = "Argentina"
+    "Chile" = "Chile"
+    "Colombia" = "Colombia"
+    "Peru" = "Peru"
+    "Venezuela" = "Venezuela"
+    "Uruguay" = "Uruguai"
+    "Paraguay" = "Paraguai"
+    "Bolivia" = "Bolivia"
+    "Ecuador" = "Equador"
+    "Guyana" = "Guiana"
+    "Suriname" = "Suriname"
+    "Panama" = "Panama"
+    "Costa Rica" = "Costa Rica"
+    "Guatemala" = "Guatemala"
+    "Honduras" = "Honduras"
+    "El Salvador" = "El Salvador"
+    "Nicaragua" = "Nicaragua"
+    "Cuba" = "Cuba"
+    "Dominican Republic" = "Republica Dominicana"
+    "Haiti" = "Haiti"
+    "Jamaica" = "Jamaica"
+    "Bahamas" = "Bahamas"
+    "Barbados" = "Barbados"
+    "Trinidad and Tobago" = "Trindade e Tobago"
+    "Portugal" = "Portugal"
+    "Spain" = "Espanha"
+    "France" = "Franca"
+    "Germany" = "Alemanha"
+    "Italy" = "Italia"
+    "Netherlands" = "Paises Baixos"
+    "Belgium" = "Belgica"
+    "Switzerland" = "Suica"
+    "Austria" = "Austria"
+    "Ireland" = "Irlanda"
+    "Poland" = "Polonia"
+    "Czech Republic" = "Republica Tcheca"
+    "Czechia" = "Republica Tcheca"
+    "Slovakia" = "Eslovaquia"
+    "Hungary" = "Hungria"
+    "Romania" = "Romenia"
+    "Bulgaria" = "Bulgaria"
+    "Greece" = "Grecia"
+    "Sweden" = "Suecia"
+    "Norway" = "Noruega"
+    "Finland" = "Finlandia"
+    "Denmark" = "Dinamarca"
+    "Iceland" = "Islandia"
+    "Russia" = "Russia"
+    "Russian Federation" = "Russia"
+    "Ukraine" = "Ucrania"
+    "Belarus" = "Bielorrussia"
+    "China" = "China"
+    "Japan" = "Japao"
+    "South Korea" = "Coreia do Sul"
+    "Korea, Republic of" = "Coreia do Sul"
+    "North Korea" = "Coreia do Norte"
+    "Korea, Democratic People's Republic of" = "Coreia do Norte"
+    "India" = "India"
+    "Pakistan" = "Paquistao"
+    "Bangladesh" = "Bangladesh"
+    "Sri Lanka" = "Sri Lanka"
+    "Nepal" = "Nepal"
+    "Bhutan" = "Butao"
+    "Myanmar" = "Mianmar"
+    "Thailand" = "Tailandia"
+    "Vietnam" = "Vietna"
+    "Laos" = "Laos"
+    "Cambodia" = "Camboja"
+    "Malaysia" = "Malasia"
+    "Singapore" = "Singapura"
+    "Indonesia" = "Indonesia"
+    "Philippines" = "Filipinas"
+    "Taiwan" = "Taiwan"
+    "Hong Kong" = "Hong Kong"
+    "Israel" = "Israel"
+    "Saudi Arabia" = "Arabia Saudita"
+    "United Arab Emirates" = "Emirados Arabes Unidos"
+    "Qatar" = "Catar"
+    "Kuwait" = "Kuwait"
+    "Bahrain" = "Bahrein"
+    "Oman" = "Oma"
+    "Yemen" = "Iemen"
+    "Iran" = "Ira"
+    "Iran, Islamic Republic of" = "Ira"
+    "Iraq" = "Iraque"
+    "Syria" = "Siria"
+    "Jordan" = "Jordania"
+    "Lebanon" = "Libano"
+    "Turkey" = "Turquia"
+    "South Africa" = "Africa do Sul"
+    "Egypt" = "Egito"
+    "Morocco" = "Marrocos"
+    "Algeria" = "Argelia"
+    "Tunisia" = "Tunisia"
+    "Nigeria" = "Nigeria"
+    "Kenya" = "Quenia"
+    "Ethiopia" = "Etiopia"
+    "Ghana" = "Gana"
+    "Angola" = "Angola"
+    "Mozambique" = "Mocambique"
+    "Australia" = "Australia"
+    "New Zealand" = "Nova Zelandia"
+}
 $Banner = @"
  _            __
 (_)___  _  __/ /_  _____
@@ -132,6 +245,13 @@ function Write-Color {
     }
 }
 
+function Convert-PaisPT {
+    param([string]$Nome)
+    if ([string]::IsNullOrWhiteSpace($Nome)) { return $Nome }
+    if ($PaisPT.ContainsKey($Nome)) { return $PaisPT[$Nome] }
+    return $Nome
+}
+
 function Test-IpValido {
     param([string]$Valor)
     $parsed = $null
@@ -187,7 +307,7 @@ function To-ResultadoObjeto {
     $org = if ($Api.connection.org -eq "Google LLC") { "cyber" } else { $Api.connection.org }
     $obj = [ordered]@{
         ip          = $Api.ip
-        pais        = $Api.country
+        pais        = (Convert-PaisPT -Nome $Api.country)
         regiao      = $Api.region
         cidade      = $Api.city
         cep         = $Api.postal
