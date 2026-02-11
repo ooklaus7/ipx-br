@@ -17,6 +17,8 @@ Ferramenta de localizacao por IP com:
 - alerta de anomalia com `--anomaly` (mudanca pais/org/asn)
 - classificacao de risco visual (LOW/MED/HIGH/CRITICAL)
 - tema por arquivo com `--theme-file`
+- tema por comando com `--theme <nome>`
+- listagem de temas com `--list-themes`
 - barra de progresso em lote
 - relatorio HTML com `--report-html`
 - saida texto/JSON
@@ -59,6 +61,8 @@ sudo apt update && sudo apt install -y curl jq python3
 ./localizar-ip.sh --report --report-file meu_relatorio.txt 8.8.8.8
 ./localizar-ip.sh --report-html --report-html-file meu_relatorio.html 8.8.8.8
 ./localizar-ip.sh --theme-file ~/.ipx-br-theme 8.8.8.8
+./localizar-ip.sh --theme cyber_blue 8.8.8.8
+./localizar-ip.sh --list-themes
 ./localizar-ip.sh --batch ips.txt --no-progress
 ./localizar-ip.sh --notify https://SEU-WEBHOOK 8.8.8.8
 ./localizar-ip.sh --update
@@ -79,6 +83,16 @@ Presets disponiveis:
 - `hacker_green`
 - `amber`
 - `cyber_blue`
+- `red_alert`
+- `violet_night`
+- `ice_white`
+- `toxic_lime`
+- `ocean_teal`
+- `sunset_orange`
+- `matrix_classic`
+- `rose_pink`
+- `gold_terminal`
+- `mono`
 
 Padrao do repositorio:
 - `hacker_green` (automatico, via `theme.default`)

@@ -2,7 +2,7 @@
 set -euo pipefail
 
 NOME_FERRAMENTA="ipx br"
-VERSAO="1.3.0"
+VERSAO="1.4.0"
 AUTOR="cyberkali"
 BANNER='
  _            __
@@ -18,6 +18,8 @@ OUT_FILE=""
 BATCH_FILE=""
 THEME_FILE="${HOME}/.ipx-br-theme"
 THEME_FILE_FALLBACK=""
+THEME_PRESET=""
+LIST_THEMES_MODE=0
 IP=""
 NO_COLOR=0
 NO_EFFECTS=0
@@ -89,7 +91,79 @@ set_theme_preset() {
       C_MAGENTA=$'\033[94m'; C_BLUE=$'\033[34m'; C_WHITE=$'\033[37m'
       C_GREEN_NEON=$'\033[96m'; C_GREEN_DARK=$'\033[36m'; C_GREEN_DIM=$'\033[2;36m'
       ;;
+    red_alert)
+      C_CYAN=$'\033[91m'; C_GREEN=$'\033[91m'; C_RED=$'\033[31m'; C_YELLOW=$'\033[93m'
+      C_MAGENTA=$'\033[95m'; C_BLUE=$'\033[91m'; C_WHITE=$'\033[37m'
+      C_GREEN_NEON=$'\033[91m'; C_GREEN_DARK=$'\033[31m'; C_GREEN_DIM=$'\033[2;31m'
+      ;;
+    violet_night)
+      C_CYAN=$'\033[95m'; C_GREEN=$'\033[95m'; C_RED=$'\033[31m'; C_YELLOW=$'\033[35m'
+      C_MAGENTA=$'\033[95m'; C_BLUE=$'\033[35m'; C_WHITE=$'\033[37m'
+      C_GREEN_NEON=$'\033[95m'; C_GREEN_DARK=$'\033[35m'; C_GREEN_DIM=$'\033[2;35m'
+      ;;
+    ice_white)
+      C_CYAN=$'\033[97m'; C_GREEN=$'\033[97m'; C_RED=$'\033[31m'; C_YELLOW=$'\033[37m'
+      C_MAGENTA=$'\033[97m'; C_BLUE=$'\033[97m'; C_WHITE=$'\033[97m'
+      C_GREEN_NEON=$'\033[97m'; C_GREEN_DARK=$'\033[37m'; C_GREEN_DIM=$'\033[2;37m'
+      ;;
+    toxic_lime)
+      C_CYAN=$'\033[92m'; C_GREEN=$'\033[92m'; C_RED=$'\033[31m'; C_YELLOW=$'\033[93m'
+      C_MAGENTA=$'\033[92m'; C_BLUE=$'\033[92m'; C_WHITE=$'\033[37m'
+      C_GREEN_NEON=$'\033[92m'; C_GREEN_DARK=$'\033[32m'; C_GREEN_DIM=$'\033[2;32m'
+      ;;
+    ocean_teal)
+      C_CYAN=$'\033[96m'; C_GREEN=$'\033[96m'; C_RED=$'\033[31m'; C_YELLOW=$'\033[36m'
+      C_MAGENTA=$'\033[96m'; C_BLUE=$'\033[36m'; C_WHITE=$'\033[37m'
+      C_GREEN_NEON=$'\033[96m'; C_GREEN_DARK=$'\033[36m'; C_GREEN_DIM=$'\033[2;36m'
+      ;;
+    sunset_orange)
+      C_CYAN=$'\033[93m'; C_GREEN=$'\033[93m'; C_RED=$'\033[31m'; C_YELLOW=$'\033[33m'
+      C_MAGENTA=$'\033[93m'; C_BLUE=$'\033[33m'; C_WHITE=$'\033[37m'
+      C_GREEN_NEON=$'\033[93m'; C_GREEN_DARK=$'\033[33m'; C_GREEN_DIM=$'\033[2;33m'
+      ;;
+    matrix_classic)
+      C_CYAN=$'\033[32m'; C_GREEN=$'\033[92m'; C_RED=$'\033[31m'; C_YELLOW=$'\033[92m'
+      C_MAGENTA=$'\033[32m'; C_BLUE=$'\033[32m'; C_WHITE=$'\033[37m'
+      C_GREEN_NEON=$'\033[92m'; C_GREEN_DARK=$'\033[32m'; C_GREEN_DIM=$'\033[2;32m'
+      ;;
+    rose_pink)
+      C_CYAN=$'\033[95m'; C_GREEN=$'\033[95m'; C_RED=$'\033[31m'; C_YELLOW=$'\033[35m'
+      C_MAGENTA=$'\033[95m'; C_BLUE=$'\033[95m'; C_WHITE=$'\033[37m'
+      C_GREEN_NEON=$'\033[95m'; C_GREEN_DARK=$'\033[35m'; C_GREEN_DIM=$'\033[2;35m'
+      ;;
+    gold_terminal)
+      C_CYAN=$'\033[33m'; C_GREEN=$'\033[33m'; C_RED=$'\033[31m'; C_YELLOW=$'\033[93m'
+      C_MAGENTA=$'\033[33m'; C_BLUE=$'\033[33m'; C_WHITE=$'\033[37m'
+      C_GREEN_NEON=$'\033[93m'; C_GREEN_DARK=$'\033[33m'; C_GREEN_DIM=$'\033[2;33m'
+      ;;
+    mono)
+      C_CYAN=$'\033[37m'; C_GREEN=$'\033[37m'; C_RED=$'\033[31m'; C_YELLOW=$'\033[37m'
+      C_MAGENTA=$'\033[37m'; C_BLUE=$'\033[37m'; C_WHITE=$'\033[37m'
+      C_GREEN_NEON=$'\033[37m'; C_GREEN_DARK=$'\033[37m'; C_GREEN_DIM=$'\033[2;37m'
+      ;;
+    *)
+      return 1
+      ;;
   esac
+  return 0
+}
+
+list_themes() {
+  cat <<'EOF'
+hacker_green
+amber
+cyber_blue
+red_alert
+violet_night
+ice_white
+toxic_lime
+ocean_teal
+sunset_orange
+matrix_classic
+rose_pink
+gold_terminal
+mono
+EOF
 }
 
 load_theme_file() {
@@ -102,7 +176,11 @@ load_theme_file() {
   [[ -z "$source_file" ]] && return 0
   local preset
   preset="$(awk -F'=' '/^[[:space:]]*theme[[:space:]]*=/{gsub(/[[:space:]]/,"",$2); print tolower($2); exit}' "$source_file")"
-  [[ -n "$preset" ]] && set_theme_preset "$preset"
+  if [[ -n "$preset" ]]; then
+    if ! set_theme_preset "$preset"; then
+      warn "Tema invalido em $source_file: '$preset' (use --list-themes)"
+    fi
+  fi
 }
 
 render_progress() {
@@ -280,6 +358,8 @@ print_help() {
   echo "  --report-html-file  Define nome do relatorio HTML"
   echo "  --notify <url>      Envia resultado para webhook"
   echo "  --update            Atualiza via git pull"
+  echo "  --theme <nome>      Define tema para esta execucao"
+  echo "  --list-themes       Lista temas disponiveis"
   echo "  --theme-file <arq>  Arquivo de tema (padrao: ~/.ipx-br-theme)"
   echo "  --no-progress       Desativa barra de progresso em lote"
   echo "  --no-color          Desativa cores no terminal"
@@ -295,6 +375,8 @@ print_help() {
   echo "  $0 --intel --report 8.8.8.8"
   echo "  $0 --intel --risk-visual 8.8.8.8"
   echo "  $0 --report-html --report-html-file relatorio.html 8.8.8.8"
+  echo "  $0 --theme cyber_blue 8.8.8.8"
+  echo "  $0 --list-themes"
   echo "  $0 --notify https://SEU-WEBHOOK 8.8.8.8"
   echo "  $0 --update"
   echo "  $0 --export csv --batch ips.txt"
@@ -452,6 +534,15 @@ while [[ $# -gt 0 ]]; do
       UPDATE_MODE=1
       shift
       ;;
+    --theme)
+      [[ $# -lt 2 ]] && { err "Falta o valor de --theme"; exit 1; }
+      THEME_PRESET="$(echo "$2" | tr '[:upper:]' '[:lower:]')"
+      shift 2
+      ;;
+    --list-themes)
+      LIST_THEMES_MODE=1
+      shift
+      ;;
     --theme-file)
       [[ $# -lt 2 ]] && { err "Falta o valor de --theme-file"; exit 1; }
       THEME_FILE="$2"
@@ -493,7 +584,19 @@ done
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 THEME_FILE_FALLBACK="${SCRIPT_DIR}/theme.default"
 
-load_theme_file
+if [[ $LIST_THEMES_MODE -eq 1 ]]; then
+  list_themes
+  exit 0
+fi
+
+if [[ -n "$THEME_PRESET" ]]; then
+  if ! set_theme_preset "$THEME_PRESET"; then
+    err "Tema invalido: '$THEME_PRESET' (use --list-themes)"
+    exit 1
+  fi
+else
+  load_theme_file
+fi
 
 if [[ $NO_COLOR -eq 1 ]]; then
   C_RESET=""; C_BOLD=""; C_CYAN=""; C_GREEN=""; C_RED=""; C_YELLOW=""; C_MAGENTA=""; C_BLUE=""; C_WHITE=""; C_GREEN_NEON=""; C_GREEN_DARK=""; C_GREEN_DIM=""
