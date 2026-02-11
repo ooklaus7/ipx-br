@@ -31,6 +31,16 @@ Ferramenta de localizacao por IP com:
 - `localizar-ip.sh` (Linux/Kali)
 - `localizar-ip.ps1` (Windows/PowerShell)
 
+## Instalar no Termux
+```bash
+pkg update -y
+pkg install -y git curl jq python
+git clone https://github.com/SEU_USUARIO/ipx-br.git
+cd ipx-br
+chmod +x localizar-ip.sh
+./localizar-ip.sh
+```
+
 ## Subir para GitHub (Windows PowerShell)
 Execute dentro de `C:\Users\PICHAU\ipx-br`:
 
@@ -50,16 +60,6 @@ git clone https://github.com/SEU_USUARIO/ipx-br.git
 cd ipx-br
 chmod +x localizar-ip.sh
 sudo apt update && sudo apt install -y curl jq python3
-./localizar-ip.sh
-```
-
-## Instalar no Termux
-```bash
-pkg update -y
-pkg install -y git curl jq python
-git clone https://github.com/SEU_USUARIO/ipx-br.git
-cd ipx-br
-chmod +x localizar-ip.sh
 ./localizar-ip.sh
 ```
 
