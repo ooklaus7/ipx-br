@@ -53,6 +53,16 @@ sudo apt update && sudo apt install -y curl jq python3
 ./localizar-ip.sh
 ```
 
+## Instalar no Termux
+```bash
+pkg update -y
+pkg install -y git curl jq python
+git clone https://github.com/SEU_USUARIO/ipx-br.git
+cd ipx-br
+chmod +x localizar-ip.sh
+./localizar-ip.sh
+```
+
 ## Uso rapido no Kali
 ```bash
 ./localizar-ip.sh 2
