@@ -17,6 +17,7 @@ JSON_MODE=0
 OUT_FILE=""
 BATCH_FILE=""
 THEME_FILE="${HOME}/.ipx-br-theme"
+THEME_FILE_FALLBACK=""
 IP=""
 NO_COLOR=0
 NO_EFFECTS=0
@@ -92,9 +93,15 @@ set_theme_preset() {
 }
 
 load_theme_file() {
-  [[ ! -f "$THEME_FILE" ]] && return 0
+  local source_file=""
+  if [[ -f "$THEME_FILE" ]]; then
+    source_file="$THEME_FILE"
+  elif [[ -n "$THEME_FILE_FALLBACK" && -f "$THEME_FILE_FALLBACK" ]]; then
+    source_file="$THEME_FILE_FALLBACK"
+  fi
+  [[ -z "$source_file" ]] && return 0
   local preset
-  preset="$(awk -F'=' '/^[[:space:]]*theme[[:space:]]*=/{gsub(/[[:space:]]/,"",$2); print tolower($2); exit}' "$THEME_FILE")"
+  preset="$(awk -F'=' '/^[[:space:]]*theme[[:space:]]*=/{gsub(/[[:space:]]/,"",$2); print tolower($2); exit}' "$source_file")"
   [[ -n "$preset" ]] && set_theme_preset "$preset"
 }
 
@@ -482,6 +489,9 @@ while [[ $# -gt 0 ]]; do
       ;;
   esac
 done
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+THEME_FILE_FALLBACK="${SCRIPT_DIR}/theme.default"
 
 load_theme_file
 

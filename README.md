@@ -79,3 +79,6 @@ Presets disponiveis:
 - `hacker_green`
 - `amber`
 - `cyber_blue`
+
+Padrao do repositorio:
+- `hacker_green` (automatico, via `theme.default`)
