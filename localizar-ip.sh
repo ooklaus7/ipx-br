@@ -25,6 +25,7 @@ NO_COLOR=0
 NO_EFFECTS=0
 NO_PROGRESS=0
 MEU_IP_MODE=0
+MEU_IP_PRIVADO_MODE=0
 MAP_MODE=0
 SCREENSHOT_MAP_MODE=0
 SCREENSHOT_MAP_FILE=""
@@ -258,6 +259,7 @@ run_numeric_menu() {
   echo "  6) Atualizar ferramenta"
   echo "  7) Mostrar ajuda"
   echo "  8) Escolher tema"
+  echo "  9) Consultar meu IP privado (LAN)"
   echo "  0) Sair"
   print_divider
   read -r -p "Opcao: " opt
@@ -294,6 +296,9 @@ run_numeric_menu() {
       read -r -p "Digite o nome do tema: " m_theme
       save_theme_persistent "$m_theme" || exit 1
       exit 0
+      ;;
+    9)
+      set -- --meu-ip-privado
       ;;
     0)
       exit 0
@@ -364,6 +369,7 @@ print_help() {
   echo "  --out <arquivo>     Salva a saida em arquivo"
   echo "  --batch <arquivo>   Consulta varios IPs (1 por linha)"
   echo "  --meu-ip            Detecta e consulta seu IP publico"
+  echo "  --meu-ip-privado    Mostra o(s) IP(s) privado(s) local(is)"
   echo "  --map               Mostra link do Google Maps"
   echo "  --screenshot-map    Salva imagem estatica do mapa"
   echo "  --screenshot-file   Nome base do arquivo de mapa (png)"
@@ -393,6 +399,7 @@ print_help() {
   echo "  $0 --json 1.1.1.1"
   echo "  $0 --batch ips.txt --out resultado.txt"
   echo "  $0 --meu-ip --map"
+  echo "  $0 --meu-ip-privado"
   echo "  $0 --screenshot-map --map 8.8.8.8"
   echo "  $0 --ping --host 8.8.8.8"
   echo "  $0 --intel --report 8.8.8.8"
@@ -470,6 +477,9 @@ if [[ $# -gt 0 ]]; then
       save_theme_persistent "$n_theme" || exit 1
       exit 0
       ;;
+    9)
+      set -- --meu-ip-privado
+      ;;
   esac
 fi
 
@@ -495,6 +505,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --meu-ip)
       MEU_IP_MODE=1
+      shift
+      ;;
+    --meu-ip-privado)
+      MEU_IP_PRIVADO_MODE=1
       shift
       ;;
     --map)
@@ -735,6 +749,107 @@ import ipaddress
 import sys
 ipaddress.ip_address(sys.argv[1])
 PY
+}
+
+is_private_ip() {
+  local ip="$1"
+  python3 - "$ip" >/dev/null 2>&1 <<'PY'
+import ipaddress
+import sys
+print(int(ipaddress.ip_address(sys.argv[1]).is_private))
+PY
+}
+
+private_range_label() {
+  local ip="$1"
+  local o1 o2
+  IFS='.' read -r o1 o2 _ _ <<<"$ip"
+  if [[ "$o1" == "10" ]]; then
+    echo "10.0.0.0/8"
+    return
+  fi
+  if [[ "$o1" == "172" && "$o2" -ge 16 && "$o2" -le 31 ]]; then
+    echo "172.16.0.0/12"
+    return
+  fi
+  if [[ "$o1" == "192" && "$o2" == "168" ]]; then
+    echo "192.168.0.0/16"
+    return
+  fi
+  echo "desconhecida"
+}
+
+get_private_meta() {
+  local ip="$1"
+  local iface="" prefix=""
+  if command -v ip >/dev/null 2>&1; then
+    local line cidr
+    line="$(ip -4 -o addr show 2>/dev/null | awk -v ip="$ip" '$4 ~ "^"ip"/" {print $2"\t"$4; exit}')"
+    if [[ -n "$line" ]]; then
+      iface="${line%%$'\t'*}"
+      cidr="${line#*$'\t'}"
+      prefix="${cidr#*/}"
+    fi
+  fi
+  printf "%s\t%s\n" "$iface" "$prefix"
+}
+
+get_private_ips_list() {
+  python3 - <<'PY'
+import ipaddress
+import shutil
+import subprocess
+ips=[]
+if shutil.which("ip"):
+  out = subprocess.check_output(["ip","-4","-o","addr","show","scope","global"], text=True, stderr=subprocess.DEVNULL)
+  for line in out.splitlines():
+    parts=line.split()
+    if len(parts) >= 4:
+      iface=parts[1]
+      cidr=parts[3]
+      ip=cidr.split("/")[0]
+      prefix=cidr.split("/")[1]
+      try:
+        ip_obj=ipaddress.ip_address(ip)
+      except ValueError:
+        continue
+      if ip_obj.is_private:
+        ips.append((ip,prefix,iface))
+elif shutil.which("hostname"):
+  out = subprocess.check_output(["hostname","-I"], text=True, stderr=subprocess.DEVNULL)
+  for ip in out.split():
+    try:
+      ip_obj=ipaddress.ip_address(ip)
+    except ValueError:
+      continue
+    if ip_obj.is_private:
+      ips.append((ip,"",""))
+for ip,prefix,iface in ips:
+  print(f"{ip}\t{prefix}\t{iface}")
+PY
+}
+
+private_to_json() {
+  local ip="$1" faixa="$2" iface="$3" prefix="$4"
+  jq -nc --arg ip "$ip" --arg faixa "$faixa" --arg iface "$iface" --arg prefix "$prefix" '
+    {ip:$ip, tipo:"privado", faixa:$faixa}
+    + (if $iface != "" then {interface:$iface} else {} end)
+    + (if $prefix != "" then {prefixo: ($prefix|tonumber?)} else {} end)
+  '
+}
+
+private_to_text() {
+  local ip="$1" faixa="$2" iface="$3" prefix="$4"
+  echo "IP:        $ip"
+  echo "Tipo:      privado"
+  echo "Faixa:     $faixa"
+  [[ -n "$iface" ]] && echo "Interface: $iface"
+  [[ -n "$prefix" ]] && echo "Prefixo:   /$prefix"
+}
+
+private_to_csv() {
+  local ip="$1" faixa="$2"
+  printf '"%s","PRIVADO","%s","","","","","","","privado","","","","","","","","",""\n' "$ip" "$faixa"
 }
 
 query_ip() {
@@ -1082,6 +1197,20 @@ process_single() {
     return 1
   fi
 
+  if [[ "$(is_private_ip "$ip")" == "1" ]]; then
+    local faixa iface prefix
+    faixa="$(private_range_label "$ip")"
+    IFS=$'\t' read -r iface prefix <<<"$(get_private_meta "$ip")"
+    if [[ $JSON_MODE -eq 1 ]]; then
+      private_to_json "$ip" "$faixa" "$iface" "$prefix"
+    elif [[ "$EXPORT_FORMAT" == "csv" ]]; then
+      private_to_csv "$ip" "$faixa"
+    else
+      private_to_text "$ip" "$faixa" "$iface" "$prefix"
+    fi
+    return 0
+  fi
+
   resp="$(query_ip "$ip")"
   success="$(jq -r '.success // false' <<<"$resp")"
   if [[ "$success" != "true" ]]; then
@@ -1112,6 +1241,7 @@ print_header() {
   type_line "${C_BOLD}${C_GREEN_NEON}${NOME_FERRAMENTA} v${VERSAO} - por ${AUTOR}${C_RESET}"
   [[ -n "$IP" && $MEU_IP_MODE -eq 0 ]] && type_line "${C_GREEN_DARK}Consultando localizacao para o IP: ${IP}${C_RESET}"
   [[ $MEU_IP_MODE -eq 1 ]] && type_line "${C_GREEN_DARK}Consultando localizacao para o seu IP publico: ${IP}${C_RESET}"
+  [[ $MEU_IP_PRIVADO_MODE -eq 1 ]] && type_line "${C_GREEN_DARK}Consultando IP(s) privado(s) local(is)${C_RESET}"
   [[ -n "$BATCH_FILE" ]] && type_line "${C_GREEN_DARK}Consultando localizacao em lote: ${BATCH_FILE}${C_RESET}"
   print_divider
 }
@@ -1122,7 +1252,7 @@ print_footer() {
   ok "assinatura: ${AUTOR}"
 }
 
-if [[ -z "$IP" && -z "$BATCH_FILE" && $MEU_IP_MODE -eq 0 ]]; then
+if [[ -z "$IP" && -z "$BATCH_FILE" && $MEU_IP_MODE -eq 0 && $MEU_IP_PRIVADO_MODE -eq 0 ]]; then
   print_help
   exit 1
 fi
@@ -1131,8 +1261,9 @@ modo_count=0
 [[ -n "$IP" ]] && modo_count=$((modo_count + 1))
 [[ -n "$BATCH_FILE" ]] && modo_count=$((modo_count + 1))
 [[ $MEU_IP_MODE -eq 1 ]] && modo_count=$((modo_count + 1))
+[[ $MEU_IP_PRIVADO_MODE -eq 1 ]] && modo_count=$((modo_count + 1))
 if [[ $modo_count -ne 1 ]]; then
-  err "Use apenas um modo: <ip> ou --batch <arquivo> ou --meu-ip."
+  err "Use apenas um modo: <ip> ou --batch <arquivo> ou --meu-ip ou --meu-ip-privado."
   exit 1
 fi
 
@@ -1146,9 +1277,51 @@ if [[ $MEU_IP_MODE -eq 1 ]]; then
   fi
 fi
 
+if [[ $MEU_IP_PRIVADO_MODE -eq 1 ]]; then
+  PRIVATE_IPS_LIST="$(get_private_ips_list)"
+  if [[ -z "$PRIVATE_IPS_LIST" ]]; then
+    err "Nao foi possivel detectar IP privado local."
+    exit 1
+  fi
+fi
+
 print_header
 
-if [[ -n "$IP" ]]; then
+if [[ $MEU_IP_PRIVADO_MODE -eq 1 ]]; then
+  if [[ $JSON_MODE -eq 1 ]]; then
+    TMP_JSON="$(mktemp)"
+    while IFS=$'\t' read -r p_ip p_prefix p_iface; do
+      [[ -z "$p_ip" ]] && continue
+      faixa="$(private_range_label "$p_ip")"
+      printf "%s\n" "$(private_to_json "$p_ip" "$faixa" "$p_iface" "$p_prefix")" >>"$TMP_JSON"
+    done <<<"$PRIVATE_IPS_LIST"
+    OUTPUT="$(jq -s '.' "$TMP_JSON")"
+    rm -f "$TMP_JSON"
+  elif [[ "$EXPORT_FORMAT" == "csv" ]]; then
+    CSV_HEADER='"ip","pais","regiao","cidade","cep","latitude","longitude","fuso","isp","organizacao","mapa_url","ping_ms","host_reverso","intel_proxy","intel_vpn","intel_tor","intel_hosting","intel_tipo_conexao","intel_risk_score","intel_risk_level"'
+    LINES=()
+    while IFS=$'\t' read -r p_ip _ _; do
+      [[ -z "$p_ip" ]] && continue
+      faixa="$(private_range_label "$p_ip")"
+      LINES+=("$(private_to_csv "$p_ip" "$faixa")")
+    done <<<"$PRIVATE_IPS_LIST"
+    OUTPUT="${CSV_HEADER}"
+    if [[ ${#LINES[@]} -gt 0 ]]; then
+      OUTPUT+=$'\n'"$(printf '%s\n' "${LINES[@]}")"
+      OUTPUT="${OUTPUT%$'\n'}"
+    fi
+  else
+    BLOCKS=()
+    while IFS=$'\t' read -r p_ip p_prefix p_iface; do
+      [[ -z "$p_ip" ]] && continue
+      faixa="$(private_range_label "$p_ip")"
+      BLOCKS+=("$(private_to_text "$p_ip" "$faixa" "$p_iface" "$p_prefix")")
+    done <<<"$PRIVATE_IPS_LIST"
+    OUTPUT="$(printf '%s\n--------------------------\n' "${BLOCKS[@]}")"
+    OUTPUT="${OUTPUT%$'\n--------------------------\n'}"
+  fi
+  append_history "private" "local"
+elif [[ -n "$IP" ]]; then
   if ! OUTPUT="$(process_single "$IP")"; then
     exit 1
   fi

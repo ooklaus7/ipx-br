@@ -5,6 +5,7 @@ Release atual: `v2.0.0`
 Ferramenta de localizacao por IP com:
 - menu numerico
 - modo `--meu-ip`
+- modo `--meu-ip-privado`
 - link de mapa com `--map`
 - latencia com `--ping`
 - host reverso com `--host`
@@ -73,6 +74,7 @@ sudo apt update && sudo apt install -y curl jq python3
 ./localizar-ip.sh --history
 ./localizar-ip.sh --no-effects
 ./localizar-ip.sh --no-color
+./localizar-ip.sh --meu-ip-privado
 ```
 
 ## Tema customizado

@@ -7,6 +7,7 @@ param(
     [string]$Batch,
     [switch]$NoColor,
     [switch]$MeuIp,
+    [switch]$MeuIpPrivado,
     [switch]$Map
 )
 
@@ -52,6 +53,7 @@ function Show-Help {
     Write-Host "  -Out <arquivo>       Salva a saida em arquivo"
     Write-Host "  -Batch <arquivo>     Consulta varios IPs (1 por linha)"
     Write-Host "  -MeuIp               Detecta e consulta seu IP publico"
+    Write-Host "  -MeuIpPrivado        Mostra o(s) IP(s) privado(s) local(is)"
     Write-Host "  -Map                 Mostra link do Google Maps"
     Write-Host "  -NoColor             Desativa cores no terminal"
     Write-Host ""
@@ -60,6 +62,7 @@ function Show-Help {
     Write-Host "  .\localizar-ip.ps1 -Json 1.1.1.1"
     Write-Host "  .\localizar-ip.ps1 -Batch .\ips.txt -Out .\resultado.txt"
     Write-Host "  .\localizar-ip.ps1 -MeuIp -Map"
+    Write-Host "  .\localizar-ip.ps1 -MeuIpPrivado"
     Write-Host "  .\localizar-ip.ps1 1"
 }
 
@@ -73,7 +76,8 @@ function Invoke-NumericMenu {
     Write-Host "  2) Consultar meu IP publico (com mapa)"
     Write-Host "  3) Consultar um IP com mapa"
     Write-Host "  4) Consulta em lote por arquivo"
-    Write-Host "  5) Mostrar ajuda"
+    Write-Host "  5) Consultar meu IP privado (LAN)"
+    Write-Host "  6) Mostrar ajuda"
     Write-Host "  0) Sair"
     Show-Divider
     $opt = Read-Host "Opcao"
@@ -85,6 +89,7 @@ function Invoke-NumericMenu {
         Out   = $null
         Batch = $null
         MeuIp = $false
+        MeuIpPrivado = $false
         Map   = $false
         Exit  = $false
     }
@@ -94,7 +99,8 @@ function Invoke-NumericMenu {
         "2" { $cfg.MeuIp = $true; $cfg.Map = $true }
         "3" { $cfg.Map = $true; $cfg.Ip = Read-Host "Digite o IP" }
         "4" { $cfg.Batch = Read-Host "Digite o arquivo de lote" }
-        "5" { $cfg.Help = $true }
+        "5" { $cfg.MeuIpPrivado = $true }
+        "6" { $cfg.Help = $true }
         "0" { $cfg.Exit = $true }
         default { throw "Opcao invalida." }
     }
@@ -132,6 +138,36 @@ function Test-IpValido {
     return [System.Net.IPAddress]::TryParse($Valor, [ref]$parsed)
 }
 
+function Test-IpPrivado {
+    param([string]$Valor)
+    $parsed = $null
+    if (-not [System.Net.IPAddress]::TryParse($Valor, [ref]$parsed)) { return $false }
+    if ($parsed.AddressFamily -ne [System.Net.Sockets.AddressFamily]::InterNetwork) { return $false }
+    $b = $parsed.GetAddressBytes()
+    if ($b[0] -eq 10) { return $true }
+    if ($b[0] -eq 172 -and $b[1] -ge 16 -and $b[1] -le 31) { return $true }
+    if ($b[0] -eq 192 -and $b[1] -eq 168) { return $true }
+    return $false
+}
+
+function Get-FaixaPrivada {
+    param([string]$Valor)
+    $parsed = $null
+    if (-not [System.Net.IPAddress]::TryParse($Valor, [ref]$parsed)) { return "desconhecida" }
+    $b = $parsed.GetAddressBytes()
+    if ($b[0] -eq 10) { return "10.0.0.0/8" }
+    if ($b[0] -eq 172 -and $b[1] -ge 16 -and $b[1] -le 31) { return "172.16.0.0/12" }
+    if ($b[0] -eq 192 -and $b[1] -eq 168) { return "192.168.0.0/16" }
+    return "desconhecida"
+}
+
+function Get-IpPrivadosLocais {
+    $ips = Get-NetIPAddress -AddressFamily IPv4 -ErrorAction SilentlyContinue |
+        Where-Object { $_.IPAddress -and (Test-IpPrivado -Valor $_.IPAddress) } |
+        Select-Object IPAddress, InterfaceAlias, PrefixLength
+    return $ips
+}
+
 function Get-RespostaApi {
     param([string]$IpConsulta)
     $url = "https://ipwho.is/$IpConsulta"
@@ -167,19 +203,69 @@ function To-ResultadoObjeto {
     [PSCustomObject]$obj
 }
 
+function To-ResultadoPrivado {
+    param(
+        [string]$IpPrivado,
+        [string]$InterfaceAlias = $null,
+        [int]$PrefixLength = $null
+    )
+    $obj = [ordered]@{
+        ip    = $IpPrivado
+        tipo  = "privado"
+        faixa = (Get-FaixaPrivada -Valor $IpPrivado)
+    }
+    if (-not [string]::IsNullOrWhiteSpace($InterfaceAlias)) {
+        $obj["interface"] = $InterfaceAlias
+    }
+    if ($PrefixLength -gt 0) {
+        $obj["prefixo"] = $PrefixLength
+    }
+    [PSCustomObject]$obj
+}
+
 function To-TextoResultado {
     param($Obj)
     @(
         "IP:        $($Obj.ip)"
-        "Pais:      $($Obj.pais)"
-        "Regiao:    $($Obj.regiao)"
-        "Cidade:    $($Obj.cidade)"
-        "CEP:       $($Obj.cep)"
-        "Latitude:  $($Obj.latitude)"
-        "Longitude: $($Obj.longitude)"
-        "Fuso:      $($Obj.fuso)"
-        "ISP:       $($Obj.isp)"
-        "Organizacao: $($Obj.organizacao)"
+        if ($Obj.PSObject.Properties.Name -contains "tipo") {
+            "Tipo:      $($Obj.tipo)"
+        }
+        if ($Obj.PSObject.Properties.Name -contains "faixa") {
+            "Faixa:     $($Obj.faixa)"
+        }
+        if ($Obj.PSObject.Properties.Name -contains "interface") {
+            "Interface: $($Obj.interface)"
+        }
+        if ($Obj.PSObject.Properties.Name -contains "prefixo") {
+            "Prefixo:   /$($Obj.prefixo)"
+        }
+        if ($Obj.PSObject.Properties.Name -contains "pais") {
+            "Pais:      $($Obj.pais)"
+        }
+        if ($Obj.PSObject.Properties.Name -contains "regiao") {
+            "Regiao:    $($Obj.regiao)"
+        }
+        if ($Obj.PSObject.Properties.Name -contains "cidade") {
+            "Cidade:    $($Obj.cidade)"
+        }
+        if ($Obj.PSObject.Properties.Name -contains "cep") {
+            "CEP:       $($Obj.cep)"
+        }
+        if ($Obj.PSObject.Properties.Name -contains "latitude") {
+            "Latitude:  $($Obj.latitude)"
+        }
+        if ($Obj.PSObject.Properties.Name -contains "longitude") {
+            "Longitude: $($Obj.longitude)"
+        }
+        if ($Obj.PSObject.Properties.Name -contains "fuso") {
+            "Fuso:      $($Obj.fuso)"
+        }
+        if ($Obj.PSObject.Properties.Name -contains "isp") {
+            "ISP:       $($Obj.isp)"
+        }
+        if ($Obj.PSObject.Properties.Name -contains "organizacao") {
+            "Organizacao: $($Obj.organizacao)"
+        }
         if ($Obj.PSObject.Properties.Name -contains "mapa_url") {
             "Mapa:      $($Obj.mapa_url)"
         }
@@ -191,20 +277,21 @@ if ($Help) {
     exit 0
 }
 
-$hasAnyOption = $Help -or $Json -or (-not [string]::IsNullOrWhiteSpace($Out)) -or (-not [string]::IsNullOrWhiteSpace($Batch)) -or $NoColor -or $MeuIp -or $Map
+$hasAnyOption = $Help -or $Json -or (-not [string]::IsNullOrWhiteSpace($Out)) -or (-not [string]::IsNullOrWhiteSpace($Batch)) -or $NoColor -or $MeuIp -or $MeuIpPrivado -or $Map
 
-if (-not $hasAnyOption -and ($Ip -match "^[0-5]$")) {
+if (-not $hasAnyOption -and ($Ip -match "^[0-6]$")) {
     switch ($Ip) {
         "0" { exit 0 }
         "1" { $Ip = Read-Host "Digite o IP" }
         "2" { $Ip = $null; $MeuIp = $true; $Map = $true }
         "3" { $Ip = Read-Host "Digite o IP"; $Map = $true }
         "4" { $Ip = $null; $Batch = Read-Host "Digite o arquivo de lote" }
-        "5" { $Help = $true }
+        "5" { $MeuIpPrivado = $true }
+        "6" { $Help = $true }
     }
 }
 
-if ([string]::IsNullOrWhiteSpace($Ip) -and [string]::IsNullOrWhiteSpace($Batch) -and -not $MeuIp -and -not $Help) {
+if ([string]::IsNullOrWhiteSpace($Ip) -and [string]::IsNullOrWhiteSpace($Batch) -and -not $MeuIp -and -not $MeuIpPrivado -and -not $Help) {
     try {
         $menu = Invoke-NumericMenu
     }
@@ -219,6 +306,7 @@ if ([string]::IsNullOrWhiteSpace($Ip) -and [string]::IsNullOrWhiteSpace($Batch) 
     if (-not [string]::IsNullOrWhiteSpace($menu.Out)) { $Out = $menu.Out }
     if (-not [string]::IsNullOrWhiteSpace($menu.Batch)) { $Batch = $menu.Batch }
     if ($menu.MeuIp) { $MeuIp = $true }
+    if ($menu.MeuIpPrivado) { $MeuIpPrivado = $true }
     if ($menu.Map) { $Map = $true }
     if (-not [string]::IsNullOrWhiteSpace($menu.Ip)) { $Ip = $menu.Ip }
 }
@@ -228,7 +316,7 @@ if ($Help) {
     exit 0
 }
 
-if ([string]::IsNullOrWhiteSpace($Ip) -and [string]::IsNullOrWhiteSpace($Batch) -and -not $MeuIp) {
+if ([string]::IsNullOrWhiteSpace($Ip) -and [string]::IsNullOrWhiteSpace($Batch) -and -not $MeuIp -and -not $MeuIpPrivado) {
     Show-Help
     exit 1
 }
@@ -237,8 +325,9 @@ $modoCount = 0
 if (-not [string]::IsNullOrWhiteSpace($Ip)) { $modoCount++ }
 if (-not [string]::IsNullOrWhiteSpace($Batch)) { $modoCount++ }
 if ($MeuIp) { $modoCount++ }
+if ($MeuIpPrivado) { $modoCount++ }
 if ($modoCount -ne 1) {
-    Write-Error "Use apenas um modo: <ip> ou -Batch <arquivo> ou -MeuIp."
+    Write-Error "Use apenas um modo: <ip> ou -Batch <arquivo> ou -MeuIp ou -MeuIpPrivado."
     exit 1
 }
 
@@ -252,11 +341,22 @@ if ($MeuIp) {
     }
 }
 
+if ($MeuIpPrivado) {
+    $privados = Get-IpPrivadosLocais
+    if (-not $privados -or $privados.Count -eq 0) {
+        Write-Error "Nao foi possivel detectar IP privado local."
+        exit 1
+    }
+}
+
 if (-not $Json) {
     Show-Banner
     Write-Color "$NomeFerramenta v$Versao - por $Autor" "Green"
     if ($MeuIp) {
         Write-Color "Consultando localizacao para o seu IP publico: $Ip" "DarkGreen"
+    }
+    elseif ($MeuIpPrivado) {
+        Write-Color "Consultando IP(s) privado(s) local(is)" "DarkGreen"
     }
     elseif (-not [string]::IsNullOrWhiteSpace($Ip)) {
         Write-Color "Consultando localizacao para o IP: $Ip" "DarkGreen"
@@ -270,27 +370,49 @@ if (-not $Json) {
 
 $saidaFinal = ""
 
-if (-not [string]::IsNullOrWhiteSpace($Ip)) {
+if ($MeuIpPrivado) {
+    $objs = @()
+    foreach ($p in $privados) {
+        $objs += To-ResultadoPrivado -IpPrivado $p.IPAddress -InterfaceAlias $p.InterfaceAlias -PrefixLength $p.PrefixLength
+    }
+    if ($Json) {
+        $saidaFinal = $objs | ConvertTo-Json -Depth 5
+    }
+    else {
+        $blocos = @()
+        foreach ($o in $objs) {
+            $blocos += (To-TextoResultado -Obj $o)
+        }
+        $saidaFinal = $blocos -join "`n--------------------------`n"
+    }
+}
+elseif (-not [string]::IsNullOrWhiteSpace($Ip)) {
     if (-not (Test-IpValido -Valor $Ip)) {
         Write-Error "IP invalido: '$Ip'. Exemplo de uso: .\localizar-ip.ps1 8.8.8.8"
         exit 1
     }
 
-    try {
-        $response = Get-RespostaApi -IpConsulta $Ip
+    if (Test-IpPrivado -Valor $Ip) {
+        $iface = Get-NetIPAddress -AddressFamily IPv4 -IPAddress $Ip -ErrorAction SilentlyContinue | Select-Object -First 1
+        $obj = To-ResultadoPrivado -IpPrivado $Ip -InterfaceAlias $iface.InterfaceAlias -PrefixLength $iface.PrefixLength
     }
-    catch {
-        Write-Error "Falha ao consultar a API de localizacao por IP. Detalhes: $($_.Exception.Message)"
-        exit 1
-    }
+    else {
+        try {
+            $response = Get-RespostaApi -IpConsulta $Ip
+        }
+        catch {
+            Write-Error "Falha ao consultar a API de localizacao por IP. Detalhes: $($_.Exception.Message)"
+            exit 1
+        }
 
-    if (-not $response.success) {
-        $msg = if ($response.message) { $response.message } else { "erro desconhecido" }
-        Write-Error "Nao foi possivel localizar o IP '$Ip': $msg"
-        exit 1
-    }
+        if (-not $response.success) {
+            $msg = if ($response.message) { $response.message } else { "erro desconhecido" }
+            Write-Error "Nao foi possivel localizar o IP '$Ip': $msg"
+            exit 1
+        }
 
-    $obj = To-ResultadoObjeto -Api $response -IncludeMap:$Map
+        $obj = To-ResultadoObjeto -Api $response -IncludeMap:$Map
+    }
     if ($Json) {
         $saidaFinal = $obj | ConvertTo-Json -Depth 5
     }
@@ -314,13 +436,19 @@ else {
                 continue
             }
             try {
-                $resp = Get-RespostaApi -IpConsulta $ipLinha
-                if ($resp.success) {
-                    $itens += To-ResultadoObjeto -Api $resp -IncludeMap:$Map
+                if (Test-IpPrivado -Valor $ipLinha) {
+                    $iface = Get-NetIPAddress -AddressFamily IPv4 -IPAddress $ipLinha -ErrorAction SilentlyContinue | Select-Object -First 1
+                    $itens += To-ResultadoPrivado -IpPrivado $ipLinha -InterfaceAlias $iface.InterfaceAlias -PrefixLength $iface.PrefixLength
                 }
                 else {
-                    $msg = if ($resp.message) { $resp.message } else { "erro desconhecido" }
-                    $itens += [PSCustomObject]@{ ip = $ipLinha; erro = $msg }
+                    $resp = Get-RespostaApi -IpConsulta $ipLinha
+                    if ($resp.success) {
+                        $itens += To-ResultadoObjeto -Api $resp -IncludeMap:$Map
+                    }
+                    else {
+                        $msg = if ($resp.message) { $resp.message } else { "erro desconhecido" }
+                        $itens += [PSCustomObject]@{ ip = $ipLinha; erro = $msg }
+                    }
                 }
             }
             catch {
@@ -337,14 +465,21 @@ else {
                 continue
             }
             try {
-                $resp = Get-RespostaApi -IpConsulta $ipLinha
-                if ($resp.success) {
-                    $obj = To-ResultadoObjeto -Api $resp -IncludeMap:$Map
+                if (Test-IpPrivado -Valor $ipLinha) {
+                    $iface = Get-NetIPAddress -AddressFamily IPv4 -IPAddress $ipLinha -ErrorAction SilentlyContinue | Select-Object -First 1
+                    $obj = To-ResultadoPrivado -IpPrivado $ipLinha -InterfaceAlias $iface.InterfaceAlias -PrefixLength $iface.PrefixLength
                     $blocos += "IP consultado: $ipLinha`n$(To-TextoResultado -Obj $obj)"
                 }
                 else {
-                    $msg = if ($resp.message) { $resp.message } else { "erro desconhecido" }
-                    $blocos += "IP consultado: $ipLinha`nERRO: $msg"
+                    $resp = Get-RespostaApi -IpConsulta $ipLinha
+                    if ($resp.success) {
+                        $obj = To-ResultadoObjeto -Api $resp -IncludeMap:$Map
+                        $blocos += "IP consultado: $ipLinha`n$(To-TextoResultado -Obj $obj)"
+                    }
+                    else {
+                        $msg = if ($resp.message) { $resp.message } else { "erro desconhecido" }
+                        $blocos += "IP consultado: $ipLinha`nERRO: $msg"
+                    }
                 }
             }
             catch {
